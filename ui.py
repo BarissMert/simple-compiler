@@ -21,6 +21,7 @@ class CompilerUI:
         # Sağ Panel: Çıktı Sekmeleri
         right_frame = tk.Frame(root)
         right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
 
         self.notebook = ttk.Notebook(right_frame)
         self.notebook.pack(fill=tk.BOTH, expand=True)

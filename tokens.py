@@ -10,6 +10,7 @@ class TokenType(Enum):
     DELIMITER = auto()
     UNKNOWN = auto()
     EOF = auto()
+    
 
 class Token:
     def __init__(self, type_, value, line):
