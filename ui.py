@@ -22,7 +22,6 @@ class CompilerUI:
         right_frame = tk.Frame(root)
         right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-
         self.notebook = ttk.Notebook(right_frame)
         self.notebook.pack(fill=tk.BOTH, expand=True)
 
@@ -37,35 +36,45 @@ class CompilerUI:
 
     def compile_code(self):
         from lexer import Lexer
+        from parser import Parser # Parser'ı projeye dahil ediyoruz
 
         source_code = self.source_text.get("1.0", tk.END).strip()
         if not source_code:
             return
 
-        # Lexer nesnesini oluştur ve tokenları al
+        # --- PASS 1: Lexical Analysis ---
         lexer = Lexer(source_code)
-        tokens, symbol_table, errors = lexer.tokenize()
+        tokens, symbol_table, lexer_errors = lexer.tokenize()
 
-        # 1. Lexer (Pass 1) Çıktısını Hazırla
         token_output = f"{'Line':<10}{'Token':<20}{'Type'}\n" + "-"*45 + "\n"
         for t in tokens:
             if t.type.name != "EOF":
                 token_output += f"{t.line:<10}{t.value:<20}{t.type.name}\n"
         self.write_to_tab(self.tokens_tab, token_output)
 
-        # 2. Sembol Tablosu Çıktısını Hazırla
-        sym_output = f"{'Identifier':<15}{'Attributes'}\n" + "-"*45 + "\n"
-        for identifier, attrs in symbol_table.items():
-            sym_output += f"{identifier:<15}{str(attrs)}\n"
+        # --- PASS 2: Syntax and Semantic Analysis ---
+        parser = Parser(tokens, symbol_table)
+        ast = parser.parse()
+        parser_errors = parser.errors
+
+        # Sembol Tablosunu Güncelle (Artık tipleri de biliyoruz)
+        sym_output = f"{'Identifier':<15}{'Type':<10}{'Scope':<10}{'Line'}\n" + "-"*45 + "\n"
+        for identifier, attrs in parser.symbol_table.items():
+            t_type = attrs.get('type') or 'Unknown'
+            sym_output += f"{identifier:<15}{t_type:<10}{attrs['scope']:<10}{attrs['line_declared']}\n"
         self.write_to_tab(self.symbol_table_tab, sym_output)
 
-        # 3. Hata Çıktısını Hazırla
-        if errors:
-            err_output = "\n".join(errors)
+        # Hataları Birleştir ve Ekrana Yazdır
+        all_errors = lexer_errors + parser_errors
+        if all_errors:
+            err_output = "\n".join(all_errors)
         else:
-            err_output = "Pass 1 (Lexical Analysis) completed with 0 errors.\nWaiting for Pass 2..."
+            err_output = "Compilation Successful!\n0 Lexical Errors\n0 Syntax Errors\n0 Semantic Errors\n\nGenerated AST:\n"
+            for node in ast:
+                err_output += f"{node}\n"
+        
         self.write_to_tab(self.errors_tab, err_output)
-
+        
     def write_to_tab(self, tab, text):
         tab.config(state=tk.NORMAL)
         tab.delete("1.0", tk.END)
